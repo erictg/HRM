@@ -186,6 +186,8 @@ void HRM_PlugIn::PluginStart()
 	m_f_roll = XPLMFindDataRef("sim/flightmodel/position/phi");
 
 	m_f_jett_weight = XPLMFindDataRef("sim/flightmodel/weight/m_jettison");
+
+	m_f_radio_alt_ft = XPLMFindDataRef("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot");
 	CountMissions();
 	ReadMissions();
 
@@ -1060,6 +1062,29 @@ void HRM_PlugIn::MissionCancel()
 	pHRM->m_mission_state = HRM::State_Create_Mission;
 
 	if (m_patient_off != NULL) XPLMCommandOnce(m_patient_off);
+}
+
+bool HRM_PlugIn::MissionIsHovering()
+{
+	float hover_alt;
+	if (m_difficutly == HRM::Difficulty::Easy) hover_alt = HRM::hover_height_easy;
+	else if (m_difficutly == HRM::Difficulty::Normal) hover_alt = HRM::hover_height_normal;
+	else hover_alt = HRM::hover_height_hard;
+
+	float hover_dist;
+	if (m_difficutly == HRM::Difficulty::Easy) hover_dist = HRM::hover_dist_easy;
+	else if (m_difficutly == HRM::Difficulty::Normal) hover_dist = HRM::hover_dist_normal;
+	else hover_dist = HRM::hover_dist_hard;
+
+
+	if ((m_i_on_ground == 0) && (m_lf_radio_alt_ft <= hover_alt))
+	{
+		if (calc_distance_m(m_ld_latitude, m_ld_longitude, mp_cm_waypoint->latitude, mp_cm_waypoint->longitude) < hover_dist) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void HRM_PlugIn::SetPatient(bool patient_onboard)
@@ -2128,6 +2153,8 @@ void HRM_PlugIn::ReadDataFast()
 	m_li_replay = XPLMGetDatai(m_i_replay);
 
 	m_lf_HSL_bambi_water_level = XPLMGetDatad(m_f_HSL_bambi_water_level);
+
+	m_lf_radio_alt_ft = XPLMGetDataf(m_f_radio_alt_ft);
 }
 
 void HRM_PlugIn::ReadDataSlow()
@@ -2651,10 +2678,17 @@ float HRM_PlugIn::PluginFlightLoopCallback(float elapsedMe, float elapsedSim, in
 						// If within 100m and collective down or fse can finish
 						if (calc_distance_m(m_ld_latitude, m_ld_longitude, mp_cm_waypoint->latitude, mp_cm_waypoint->longitude) < HRM::pickup_max_distance)
 						{
+							if (MissionIsHovering() == true) {
+								FSEFinishFlight();
+
+								m_mission_at_patient_countdown = m_patient_countdown_value;
+								m_mission_state = HRM::State_At_Patient;
+								// Load Patient
+								IvyPlaySound(5, -1, -1);
+							}
 
 
-
-							if ((m_lfa_prop_ratio[0] < m_cm_collective_min) && (m_cm_enable_fse == true) && (m_cm_autoconnect_fse == true) && ((FSECanFinish() == true) || (FSEIsFlying() == false)))
+							else if ((m_lfa_prop_ratio[0] < m_cm_collective_min) && (m_cm_enable_fse == true) && (m_cm_autoconnect_fse == true) && ((FSECanFinish() == true) || (FSEIsFlying() == false)))
 							{
 								FSEFinishFlight();
 
@@ -3118,7 +3152,7 @@ float HRM_PlugIn::PluginFlightLoopCallback(float elapsedMe, float elapsedSim, in
 					MissionStartFlight2();
 				}
 
-				else if (m_li_on_ground == 1)
+				else if ((m_li_on_ground == 1) || (MissionIsHovering() == true))
 				{
 					m_mission_at_patient_countdown -= m_time_delta;
 					if (m_mission_at_patient_countdown <= 0)

@@ -124,6 +124,14 @@ namespace HRM
 
 	const int type_sling = 3;
 
+	const float hover_dist_easy = 20;
+	const float hover_dist_normal = 10;
+	const float hover_dist_hard = 5;
+
+	const float hover_height_easy = 15;
+	const float hover_height_normal = 8;
+	const float hover_height_hard = 4.5;
+
 	enum Slingload_Type
 	{
 		HSL,

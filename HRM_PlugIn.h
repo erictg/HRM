@@ -510,6 +510,8 @@ public:
 
 	XPLMDataRef m_f_jett_weight;
 
+	XPLMDataRef m_f_radio_alt_ft;
+
 	/////////////////////////////////////////////////////////////////////////////////
 	// Dataref Variables
 
@@ -561,6 +563,8 @@ public:
 	float m_lf_jett_weight = 0;
 	float m_lf_jett_weight_old = 0;
 
+	float m_lf_radio_alt_ft = 0;
+
 public:
 	HRM_PlugIn();
 	~HRM_PlugIn();
@@ -590,6 +594,7 @@ public:
 	void MissionFinish();
 	void MissionReset();
 	void MissionCancel();
+	bool MissionIsHovering();
 	void SetPatient(bool patient_onboard);
 
 	void FSERegister();
